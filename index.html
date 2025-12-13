@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Plays Your Words</title>
+    <script src="https://unpkg.com/compromise"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @font-face {
+            font-family: 'OnulSamhwa Gothic';
+            src: url('OnulSamhwagothic-Regular.otf') format('opentype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+            background: #fff;
+            color: #000;
+            padding: 0;
+            min-height: 100vh;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: pan-x pan-y;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 30px;
+            background: #fff;
+            border-bottom: 1px solid #000;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 14px;
+            font-weight: normal;
+            letter-spacing: 0.5px;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 12px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            transition: opacity 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            opacity: 0.5;
+        }
+        
+        .control-btn:active:not(:disabled) {
+            opacity: 0.3;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.2;
+            cursor: default;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #tempoSlider {
+            width: 100px;
+            height: 1px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #000;
+            outline: none;
+        }
+
+        #tempoSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 8px;
+            height: 8px;
+            background: #000;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .score-container {
+            position: relative;
+            background: #fff;
+            height: 100vh;
+            padding-top: 60px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-width: 100%;
+            -webkit-overflow-scrolling: touch;
+            cursor: default;
+        }
+        
+        .score-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .score-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .score-container::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .score-container:hover::-webkit-scrollbar-thumb {
+            opacity: 1;
+        }
+        
+        .score-container::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+        
+        .score-container:active {
+            cursor: grabbing;
+        }
+
+        .chat-container {
+            position: absolute;
+            top: 80px;
+            left: 0;
+            right: 0;
+            bottom: 100px;
+            overflow-y: auto;
+            padding: 20px 40px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .chat-message {
+            display: flex;
+            margin-bottom: 20px;
+            pointer-events: auto;
+        }
+
+        .chat-message.user {
+            justify-content: flex-end;
+        }
+
+        .chat-message.ai {
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 35%;
+            padding: 11px 16px 13px 16px;
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+            font-size: 12px;
+            border: 1px solid #000;
+            border-radius: 20px;
+            background: #fff;
+            line-height: 1.4;
+        }
+
+        .chat-message.user .message-bubble {
+            text-align: right;
+        }
+
+        .chat-message.ai .message-bubble {
+            text-align: left;
+        }
+        
+        .chat-message {
+            cursor: pointer;
+        }
+        
+        .chat-message.active .message-bubble {
+            background: #f0f0f0;
+        }
+        
+        .score-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .score-container::-webkit-scrollbar-track {
+            background: #f0f0f0;
+        }
+        
+        .score-container::-webkit-scrollbar-thumb {
+            background: #000;
+        }
+
+        .lifeline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: visible;
+        }
+
+        .word-element {
+            position: absolute;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 10px;
+            border: 1px solid transparent;
+            z-index: 1;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .word-element:hover {
+            opacity: 0.7;
+            border: 1px solid #ccc;
+        }
+        
+        .word-element:active {
+            opacity: 0.5;
+        }
+        
+        .token-display img,
+        .shape-element {
+            position: relative;
+            z-index: 10;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .token-display img:active,
+        .shape-element:active {
+            opacity: 0.5;
+        }
+
+        .token-display {
+            display: flex;
+            gap: 0;
+            align-items: center;
+            position: relative;
+        }
+
+        .token-display img {
+            height: auto;
+            width: auto;
+            max-height: 100px;
+            display: block;
+            margin-left: 5px;
+        }
+        
+        .token-display img:first-child {
+            margin-left: 0;
+        }
+
+        .token-display span {
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .vector-display {
+            font-size: 7px;
+            color: #999;
+            max-width: 150px;
+            text-align: center;
+            line-height: 1.2;
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+        }
+
+        .word-text {
+            font-size: 12px;
+            color: #666;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            margin-top: 5px;
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+            font-weight: bold;
+        }
+
+        .input-section {
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            padding: 20px 30px;
+            background: transparent;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #promptInput {
+            width: 40%;
+            padding: 0 15px;
+            height: 40px;
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+            font-size: 12px;
+            border: 1px solid #000;
+            border-radius: 20px;
+            background: #fff;
+            outline: none;
+            text-align: left;
+            line-height: 40px;
+            padding-bottom: 2px;
+        }
+
+        #promptInput:focus {
+            border: 1px solid #000;
+        }
+        
+        #generateBtn {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 1px solid #000;
+            background: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: opacity 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0;
+        }
+        
+        #generateBtn:hover {
+            opacity: 0.5;
+        }
+        
+        #generateBtn:active {
+            opacity: 0.3;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border: 1px solid #000;
+            margin-bottom: 15px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .modal-btn {
+            padding: 8px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border: 1px solid #000;
+            background: #fff;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .modal-btn:hover {
+            opacity: 0.7;
+        }
+        
+        .modal-info {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .modal-info a {
+            color: #000;
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; gap: 15px;">
+                <button class="control-btn" id="playBtn">PLAY</button>
+                <button class="control-btn" id="stopBtn" disabled>STOP</button>
+                <button class="control-btn" id="resetBtn">RESET</button>
+                <button class="control-btn" id="tokenBtn">TOKEN ID</button>
+                <button class="control-btn" id="downloadBtn">DOWNLOAD</button>
+                <button class="control-btn" id="printBtn">PRINT</button>
+            </div>
+            <div class="controls">
+                <div class="speed-control">
+                    <label style="font-size: 11px; color: #666;">Tempo</label>
+                    <input type="range" id="tempoSlider" min="60" max="180" value="100" step="5">
+                    <span id="tempoValue" style="font-size: 11px; min-width: 60px;">100 BPM</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="score-container" id="scoreContainer">
+            <div class="lifeline"></div>
+            <div class="chat-container" id="chatContainer"></div>
+        </div>
+
+        <div class="input-section">
+            <input type="text" id="promptInput" placeholder="오늘은 어떤 연주를 들려드릴까요?" value="">
+            <button id="generateBtn">↑</button>
+        </div>
+    </div>
+
+    <script>
+        let audioContext = null;
+        let isPlaying = false;
+        let currentPlayIndex = 0;
+        let tempoBPM = 100;
+        let playbackTimeout = null;
+        let conversationCount = 0;
+        let conversations = [];
+        let activeConversationId = null;
+        
+        function addChatMessage(text, isUser, convId = null) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${isUser ? 'user' : 'ai'}`;
+            
+            if (!isUser && convId !== null) {
+                messageDiv.dataset.convId = convId;
+                messageDiv.addEventListener('click', function() {
+                    showConversation(convId);
+                    document.querySelectorAll('.chat-message').forEach(m => m.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            }
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = text;
+            
+            messageDiv.appendChild(bubble);
+            chatContainer.appendChild(messageDiv);
+            
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function showConversation(convId) {
+            activeConversationId = convId;
+            conversations.forEach(conv => {
+                const wrapper = document.getElementById(`score-wrapper-${conv.id}`);
+                if (wrapper) {
+                    wrapper.style.display = conv.id === convId ? 'block' : 'none';
+                }
+            });
+        }
+
+        function wordToTokenID(word) {
+            let hash = 2166136261 >>> 0;
+            for (let i = 0; i < word.length; i++) {
+                hash ^= word.charCodeAt(i);
+                hash = Math.imul(hash, 16777619) >>> 0;
+            }
+            return Math.abs(hash) % 50257;
+        }
+
+        function tokenToEmbedding(tokenID, dimensions = 8) {
+            const embedding = [];
+            let seed = tokenID;
+            for (let i = 0; i < dimensions; i++) {
+                seed = (seed * 9301 + 49297) % 233280;
+                embedding.push((seed / 233280) * 2 - 1);
+            }
+            return embedding;
+        }
+
+        function formatVector(vector) {
+            return '[' + vector.slice(0, 4).map(v => v.toFixed(3)).join(', ') + '...]';
+        }
+
+        function getWordType(word) {
+            if (typeof nlp === 'undefined') {
+                return 'other';
+            }
+            
+            const doc = nlp(word);
+            if (doc.has('#Verb')) return 'verb';
+            if (doc.has('#Adjective')) return 'adjective';
+            if (doc.has('#Noun')) return 'noun';
+            return 'other';
+        }
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('오디오 컨텍스트 생성됨');
+            }
+            
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            return audioContext;
+        }
+        
+        function ensureAudio() {
+            return initAudio();
+        }
+
+        function playSound(frequency, duration = 0.5) {
+            try {
+                const ctx = ensureAudio();
+                
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+                
+                oscillator.start(ctx.currentTime);
+                oscillator.stop(ctx.currentTime + duration);
+                
+                console.log('재생 중:', frequency, 'Hz');
+            } catch (e) {
+                console.error('오디오 에러:', e);
+            }
+        }
+
+        function getDigitFrequency(digit, tokenID = 0) {
+            // 0부터 시도레미파솔라시도레
+            const scaleFrequencies = [
+                246.94, // B3 (시)
+                261.63, // C4 (도)
+                293.66, // D4 (레)
+                329.63, // E4 (미)
+                349.23, // F4 (파)
+                392.00, // G4 (솔)
+                440.00, // A4 (라)
+                493.88, // B4 (시)
+                523.25, // C5 (도)
+                587.33  // D5 (레)
+            ];
+            
+            const index = digit % 10;
+            return scaleFrequencies[index];
+        }
+
+        function playNote(frequency, duration = 0.5, type = 'sine', volume = 0.3) {
+            try {
+                const ctx = ensureAudio();
+                
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = type;
+                
+                gainNode.gain.setValueAtTime(volume, ctx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+                
+                oscillator.start(ctx.currentTime);
+                oscillator.stop(ctx.currentTime + duration);
+            } catch (e) {
+                console.error('오디오 에러:', e);
+            }
+        }
+
+        function playChord(digitImgs, tokenID) {
+            const frequencies = [];
+            digitImgs.forEach(img => {
+                const digit = parseInt(img.alt);
+                if (!isNaN(digit)) {
+                    frequencies.push(getDigitFrequency(digit, tokenID));
+                }
+            });
+            
+            frequencies.forEach((freq, i) => {
+                setTimeout(() => {
+                    playNote(freq, 0.3, 'sine', 0.25);
+                }, i * 80);
+            });
+            
+            if (frequencies.length > 0) {
+                const bassFreq = frequencies[0] / 2;
+                playNote(bassFreq, 0.6, 'triangle', 0.2);
+            }
+            
+            setTimeout(() => {
+                if (frequencies.length >= 2) {
+                    playNote(frequencies[0], 0.5, 'sine', 0.15);
+                    playNote(frequencies[Math.floor(frequencies.length / 2)], 0.5, 'sine', 0.15);
+                }
+            }, 150);
+        }
+
+        function playScore() {
+            if (isPlaying) return;
+            
+            isPlaying = true;
+            currentPlayIndex = 0;
+            
+            document.getElementById('playBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            // 현재 활성화된 대화의 단어들만 가져오기
+            const allWordElements = [];
+            if (activeConversationId) {
+                const wrapper = document.getElementById(`score-wrapper-${activeConversationId}`);
+                if (wrapper) {
+                    const words = Array.from(wrapper.querySelectorAll('.word-element'));
+                    allWordElements.push(...words);
+                }
+            }
+            
+            playNextWord(allWordElements);
+        }
+
+        function playNextWord(wordElements) {
+            if (!isPlaying) {
+                return;
+            }
+            
+            if (currentPlayIndex >= wordElements.length) {
+                setTimeout(() => {
+                    stopScore();
+                }, 1500);
+                return;
+            }
+            
+            wordElements.forEach(el => el.style.opacity = '0.3');
+            
+            const wordElement = wordElements[currentPlayIndex];
+            const digitImgs = wordElement.querySelectorAll('.token-display img, .shape-element');
+            const wordTokenId = parseInt(wordElement.dataset.tokenId);
+            
+            wordElement.style.opacity = '1';
+            
+            const isLastWord = (currentPlayIndex === wordElements.length - 1);
+            if (isLastWord) {
+                playLastChord(digitImgs, wordTokenId);
+            } else {
+                playChord(digitImgs, wordTokenId);
+            }
+            
+            currentPlayIndex++;
+            const beatDuration = (60 / tempoBPM) * 1000;
+            playbackTimeout = setTimeout(() => playNextWord(wordElements), beatDuration);
+        }
+
+        function playLastChord(digitImgs, tokenID) {
+            const frequencies = [];
+            digitImgs.forEach(img => {
+                const digit = parseInt(img.alt);
+                if (!isNaN(digit)) {
+                    frequencies.push(getDigitFrequency(digit, tokenID));
+                }
+            });
+            
+            frequencies.forEach((freq, i) => {
+                setTimeout(() => {
+                    playNote(freq, 2.0, 'sine', 0.25);
+                }, i * 80);
+            });
+            
+            if (frequencies.length > 0) {
+                const bassFreq = frequencies[0] / 2;
+                playNote(bassFreq, 2.5, 'triangle', 0.2);
+            }
+            
+            setTimeout(() => {
+                if (frequencies.length >= 2) {
+                    playNote(frequencies[0], 2.0, 'sine', 0.15);
+                    playNote(frequencies[Math.floor(frequencies.length / 2)], 2.0, 'sine', 0.15);
+                }
+            }, 150);
+        }
+
+        function stopScore() {
+            isPlaying = false;
+            currentPlayIndex = 0;
+            
+            if (playbackTimeout) {
+                clearTimeout(playbackTimeout);
+                playbackTimeout = null;
+            }
+            
+            document.getElementById('playBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            document.querySelectorAll('.word-element').forEach(el => {
+                el.style.opacity = '1';
+            });
+        }
+
+        async function generateScore() {
+            if (isPlaying) {
+                stopScore();
+            }
+            
+            const promptInput = document.getElementById('promptInput');
+            const scoreContainer = document.getElementById('scoreContainer');
+            
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+            
+            // 첫 대화일 때 기본 원 제거
+            if (conversationCount === 0) {
+                const lifeline = scoreContainer.querySelector('.lifeline');
+                lifeline.innerHTML = '';
+            }
+            
+            addChatMessage(prompt, true);
+            
+            const enhancedText = await enhancePrompt(prompt);
+            
+            conversationCount++;
+            const convId = conversationCount;
+            
+            addChatMessage(enhancedText, false, convId);
+            
+            // 사용자 입력과 AI 답변 합치기
+            const combinedText = prompt + ' ' + enhancedText;
+            const words = combinedText.split(' ').filter(w => w.length > 0);
+            
+            console.log('AI가 해석 중:', words.length, '단어');
+            
+            promptInput.value = '';
+            
+            const containerWidth = scoreContainer.offsetWidth;
+            const containerHeight = scoreContainer.offsetHeight;
+            
+            const baseRadius = Math.min(containerWidth, containerHeight) * 0.45;
+            const wordCountFactor = Math.sqrt(words.length / 6);
+            const radius = baseRadius * wordCountFactor;
+            
+            const convData = {
+                id: convId,
+                words: words,
+                radius: radius,
+                userMessage: prompt,
+                aiResponse: enhancedText
+            };
+            conversations.push(convData);
+            
+            // 화면 중앙에 배치
+            const centerX = containerWidth / 2;
+            const centerY = containerHeight / 2;
+            
+            generateCircularLayout(words, scoreContainer, centerX, centerY, radius, convId);
+            
+            // 이전 악보들 숨기고 새 악보만 표시
+            showConversation(convId);
+            
+            // 새로 생성된 AI 메시지에 active 표시
+            const aiMessages = document.querySelectorAll('.chat-message.ai');
+            document.querySelectorAll('.chat-message').forEach(m => m.classList.remove('active'));
+            if (aiMessages.length > 0) {
+                aiMessages[aiMessages.length - 1].classList.add('active');
+            }
+            
+            console.log(`대화 ${convId} 생성: ${words.length}단어, 반지름: ${radius.toFixed(0)}px`);
+            
+            setTimeout(() => {
+                initAudio();
+                playScore();
+            }, 300);
+        }
+        
+        async function enhancePrompt(userInput) {
+            try {
+                console.log('Groq API 호출 시작...');
+                document.getElementById('promptInput').placeholder = 'AI가 생각하는 중...';
+                
+                const response = await fetch("https://crimson-salad-c165.x31531.workers.dev", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: "llama-3.3-70b-versatile",
+                        messages: [
+                            { 
+                                role: "user", 
+                                content: `다음 입력에 대해 AI 챗봇처럼 자연스럽게 응답해주세요. 5-15개 단어로 표현하세요. 입력: "${userInput}"
+
+규칙:
+- 한글이면 한글로, 영어면 영어로 답하세요
+- AI 어시스턴트가 답변하듯이 자연스럽게
+- 오직 응답 텍스트만 출력하세요
+- 설명이나 따옴표 없이 바로 텍스트만 주세요`
+                            }
+                        ],
+                        temperature: 0.8,
+                        max_tokens: 100
+                    })
+                });
+                
+                console.log('API 응답 상태:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`API 에러: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API 응답 성공');
+                
+                const enhancedText = data.choices[0].message.content.trim();
+                console.log('확장된 텍스트:', enhancedText);
+                
+                document.getElementById('promptInput').placeholder = "오늘은 어떤 연주를 들려드릴까요?";
+                return enhancedText;
+                
+            } catch (error) {
+                console.error('Groq API 에러:', error);
+                document.getElementById('promptInput').placeholder = "오늘은 어떤 연주를 들려드릴까요?";
+                return userInput;
+            }
+        }
+        
+        function generateCircularLayout(words, scoreContainer, centerX, centerY, radius, convId) {
+            const containerWidth = scoreContainer.offsetWidth;
+            const containerHeight = scoreContainer.offsetHeight;
+            const fixedCenterX = containerWidth / 2; // 가로 중앙 고정
+            
+            // 단어를 그룹으로 나누기
+            let groups = [];
+            if (words.length <= 5) {
+                groups = [words];
+            } else if (words.length <= 10) {
+                const half = Math.ceil(words.length / 2);
+                groups = [words.slice(0, half), words.slice(half)];
+            } else {
+                for (let i = 0; i < words.length; i += 5) {
+                    groups.push(words.slice(i, i + 5));
+                }
+            }
+            
+            const circleRadius = 280; // 원 크기 증가
+            const circleSpacing = 1000; // 원 사이 간격 증가
+            
+            // 첫 번째 원 위치
+            let currentY = containerHeight * 0.49;
+            
+            // 첫 번째 원의 Y 좌표를 줌 기준점으로
+            const firstCircleY = currentY;
+            
+            // wrapper 생성
+            const wrapper = document.createElement('div');
+            wrapper.id = `score-wrapper-${convId}`;
+            wrapper.style.position = 'absolute';
+            wrapper.style.left = '0';
+            wrapper.style.top = '-35px';
+            wrapper.style.width = '100%';
+            wrapper.style.minHeight = '100%';
+            wrapper.style.overflow = 'visible';
+            wrapper.setAttribute('data-conv-id', convId);
+            
+            const svgNS = 'http://www.w3.org/2000/svg';
+            const svg = document.createElementNS(svgNS, 'svg');
+            svg.style.position = 'absolute';
+            svg.style.left = '0';
+            svg.style.top = '0';
+            svg.style.width = '100%';
+            svg.style.pointerEvents = 'none';
+            svg.style.overflow = 'visible';
+            svg.setAttribute('overflow', 'visible');
+            
+            // currentY를 다시 시작점으로 초기화
+            currentY = 60 + (containerHeight - 60) / 2;
+            
+            // 각 그룹을 세로로 배치
+            groups.forEach((group, groupIndex) => {
+                const groupCenterY = currentY;
+                
+                // 원 그리기
+                const circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', fixedCenterX);
+                circle.setAttribute('cy', groupCenterY);
+                circle.setAttribute('r', circleRadius);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', '#000');
+                circle.setAttribute('stroke-width', '1');
+                circle.setAttribute('opacity', '0.3');
+                svg.appendChild(circle);
+                
+                // 단어 배치
+                group.forEach((word, index) => {
+                    const element = createWordElement(word);
+                    const angle = (index / group.length) * Math.PI * 2 - Math.PI / 2;
+                    const radiusVariation = (Math.random() - 0.5) * 60;
+                    const wordRadius = circleRadius + radiusVariation;
+                    const xPos = fixedCenterX + Math.cos(angle) * wordRadius;
+                    const yPos = groupCenterY + Math.sin(angle) * wordRadius;
+                    
+                    element.style.left = `${xPos}px`;
+                    element.style.top = `${yPos}px`;
+                    element.style.transform = 'translate(-50%, -50%)';
+                    wrapper.appendChild(element);
+                });
+                
+                currentY += circleSpacing; // 다음 원 위치
+            });
+            
+            // SVG 높이 설정: 원이 1개면 화면 높이, 여러 개면 마지막 원 아래까지만
+            let totalHeight;
+            if (groups.length === 1) {
+                totalHeight = containerHeight; // 스크롤 불필요
+            } else {
+                // 마지막 원의 Y 위치 (currentY는 이미 다음 위치로 이동했으므로 circleSpacing 빼기)
+                const lastCircleY = currentY - circleSpacing;
+                totalHeight = lastCircleY + circleRadius + 100; // 마지막 원 + 반지름 + 약간의 여백
+            }
+            svg.style.height = `${totalHeight}px`;
+            
+            wrapper.appendChild(svg);
+            scoreContainer.appendChild(wrapper);
+        }
+        
+        function createWordElement(word) {
+            const wordType = getWordType(word);
+            console.log(`단어 "${word}" 품사:`, wordType);
+            
+            const tokenID = wordToTokenID(word);
+            const embedding = tokenToEmbedding(tokenID);
+            
+            console.log(`Token ID: ${tokenID}, Embedding: [${embedding.slice(0,4).join(', ')}...]`);
+            
+            const element = document.createElement('div');
+            element.className = `word-element ${wordType}`;
+            element.dataset.tokenId = tokenID;
+            
+            const tokenContainer = document.createElement('div');
+            tokenContainer.className = 'token-display';
+            
+            const tokenString = tokenID.toString();
+            let hasLargeZero = false; // 큰 0이 이미 나왔는지 추적
+            let fourRotation = Math.random() > 0.5 ? 0 : 90; // 첫 번째 4의 회전
+            
+            for (let i = 0; i < tokenString.length; i++) {
+                const digit = tokenString[i];
+                
+                const yOffset = (Math.random() - 0.5) * 80;
+                const xOffset = (Math.random() - 0.5) * 15;
+                
+                let rotation = 0;
+                let scale = 1;
+                
+                const img = document.createElement('img');
+                let imgSrc = `${digit}.png`;
+                
+                if (digit === '1') {
+                    rotation = (Math.random() - 0.5) * 360;
+                    const randomMaxHeight = 650 + Math.random() * 150;
+                    
+                    img.src = '1.png';
+                    img.alt = digit;
+                    img.style.maxHeight = `${randomMaxHeight}px`;
+                    img.style.position = 'absolute';
+                    img.style.left = '50%';
+                    img.style.top = '50%';
+                    img.style.transform = `translate(-50%, -50%) translateY(${yOffset}px) translateX(${xOffset}px) rotate(${rotation}deg)`;
+                    img.style.pointerEvents = 'auto';
+                    img.style.cursor = 'pointer';
+                    
+                    // 1의 공간을 차지하지 않게 placeholder 추가
+                    const placeholder = document.createElement('div');
+                    placeholder.style.width = '20px';
+                    placeholder.style.height = '100px';
+                    placeholder.style.display = 'inline-block';
+                    placeholder.style.position = 'relative';
+                    placeholder.appendChild(img);
+                    
+                    img.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const freq = getDigitFrequency(parseInt(digit), tokenID);
+                        playNote(freq, 0.3, 'sine', 0.3);
+                        this.style.opacity = '0.3';
+                        setTimeout(() => {
+                            this.style.opacity = '1';
+                        }, 200);
+                    });
+                    
+                    img.onerror = function() {
+                        const span = document.createElement('span');
+                        span.textContent = digit;
+                        span.style.fontSize = '20px';
+                        span.style.fontWeight = 'bold';
+                        this.parentNode.replaceChild(span, this);
+                    };
+                    
+                    tokenContainer.appendChild(placeholder);
+                    continue;
+                } else if (digit === '4') {
+                    
+                    img.src = '4.png';
+                    img.alt = digit;
+                    img.style.maxHeight = '35px';
+                    img.style.position = 'absolute';
+                    img.style.left = '50%';
+                    img.style.top = '50%';
+                    img.style.transform = `translate(-50%, -50%) translateY(${yOffset}px) translateX(${xOffset}px) rotate(${fourRotation}deg)`;
+                    img.style.pointerEvents = 'auto';
+                    img.style.cursor = 'pointer';
+                    
+                    // 다음 4는 반대 방향으로
+                    fourRotation = fourRotation === 0 ? 90 : 0;
+                    
+                    // 4의 공간을 차지하지 않게 placeholder 추가
+                    const placeholder = document.createElement('div');
+                    placeholder.style.width = '10px';
+                    placeholder.style.height = '35px';
+                    placeholder.style.display = 'inline-block';
+                    placeholder.style.position = 'relative';
+                    placeholder.appendChild(img);
+                    
+                    img.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const freq = getDigitFrequency(parseInt(digit), tokenID);
+                        playNote(freq, 0.3, 'sine', 0.3);
+                        this.style.opacity = '0.3';
+                        setTimeout(() => {
+                            this.style.opacity = '1';
+                        }, 200);
+                    });
+                    
+                    img.onerror = function() {
+                        const span = document.createElement('span');
+                        span.textContent = digit;
+                        span.style.fontSize = '20px';
+                        span.style.fontWeight = 'bold';
+                        this.parentNode.replaceChild(span, this);
+                    };
+                    
+                    tokenContainer.appendChild(placeholder);
+                    continue;
+                } else if (digit === '8') {
+                    rotation = (Math.random() - 0.5) * 360;
+                    const isLarge = Math.random() > 0.5;
+                    imgSrc = '8-1.png';
+                    if (isLarge) {
+                        scale = 3.3;
+                    } else {
+                        scale = 1.5;
+                    }
+                } else if (digit === '0') {
+                    imgSrc = '0-1.png';
+                    if (!hasLargeZero && Math.random() > 0.5) {
+                        scale = 1.8;
+                        hasLargeZero = true;
+                    } else {
+                        scale = 0.5;
+                    }
+                } else if (digit === '7') {
+                    scale = 1.2;
+                    const rotationOptions = [0, 90, 180, 270];
+                    rotation = rotationOptions[Math.floor(Math.random() * rotationOptions.length)];
+                } else if (digit === '6') {
+                    scale = 0.65;
+                    const shouldRotate = Math.random() > 0.5;
+                    if (shouldRotate) {
+                        rotation = 90;
+                    }
+                } else if (digit === '5') {
+                    const shouldRotate = Math.random() > 0.5;
+                    if (shouldRotate) {
+                        rotation = 90;
+                    }
+                } else if (digit === '2') {
+                    scale = 0.3;
+                    const rotationOptions = [0, 45, 90, 135, 180, 225, 270, 315];
+                    rotation = rotationOptions[Math.floor(Math.random() * rotationOptions.length)];
+                }
+                
+                
+                img.src = imgSrc;
+                img.alt = digit;
+                
+                img.style.transform = `translateY(${yOffset}px) translateX(${xOffset}px) rotate(${rotation}deg) scale(${scale})`;
+                img.style.position = 'relative';
+                img.style.cursor = 'pointer';
+                
+                // 2, 6번 크기 작아서 간격 조정
+                if (digit === '2' || digit === '6') {
+                    img.style.marginLeft = '-20px';
+                    img.style.marginRight = '-20px';
+                }
+                
+                // 0번은 크기에 따라 간격 조정
+                if (digit === '0' && scale < 1) {
+                    img.style.marginLeft = '-20px';
+                    img.style.marginRight = '-20px';
+                }
+                
+                img.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const freq = getDigitFrequency(parseInt(digit), tokenID);
+                    playNote(freq, 0.3, 'sine', 0.3);
+                    this.style.opacity = '0.3';
+                    setTimeout(() => {
+                        this.style.opacity = '1';
+                    }, 200);
+                });
+                
+                img.onerror = function() {
+                    const span = document.createElement('span');
+                    span.textContent = digit;
+                    span.style.fontSize = '20px';
+                    span.style.fontWeight = 'bold';
+                    this.parentNode.replaceChild(span, this);
+                };
+                tokenContainer.appendChild(img);
+            }
+            element.appendChild(tokenContainer);
+            
+            const vectorElement = document.createElement('div');
+            vectorElement.className = 'vector-display';
+            vectorElement.textContent = formatVector(embedding);
+            element.appendChild(vectorElement);
+            
+            const textElement = document.createElement('div');
+            textElement.className = 'word-text';
+            textElement.textContent = word;
+            textElement.dataset.word = word;
+            textElement.dataset.showingToken = 'false';
+            element.appendChild(textElement);
+            
+            element.addEventListener('click', function(e) {
+                if (e.target === this || (!e.target.matches('img') && !e.target.matches('.shape-element'))) {
+                    const digitImgs = this.querySelectorAll('.token-display img, .shape-element');
+                    const wordTokenId = parseInt(this.dataset.tokenId);
+                    playChord(digitImgs, wordTokenId);
+                }
+            });
+            
+            return element;
+        }
+
+        document.getElementById('playBtn').addEventListener('click', () => {
+            initAudio();
+            playScore();
+        });
+        
+        document.getElementById('stopBtn').addEventListener('click', stopScore);
+        
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            stopScore();
+            const scoreContainer = document.getElementById('scoreContainer');
+            conversations.forEach(conv => {
+                const wrapper = document.getElementById(`score-wrapper-${conv.id}`);
+                if (wrapper) wrapper.remove();
+            });
+            conversations = [];
+            conversationCount = 0;
+            activeConversationId = null;
+            wrapperPositions = {};
+            document.getElementById('promptInput').value = '';
+            document.getElementById('chatContainer').innerHTML = '';
+            showEmptyCircle();
+        });
+        
+        document.getElementById('tokenBtn').addEventListener('click', () => {
+            const allWordTexts = document.querySelectorAll('.word-text');
+            allWordTexts.forEach(textEl => {
+                const isShowingToken = textEl.dataset.showingToken === 'true';
+                const word = textEl.dataset.word;
+                const tokenId = textEl.closest('.word-element').dataset.tokenId;
+                
+                if (isShowingToken) {
+                    textEl.textContent = word;
+                    textEl.dataset.showingToken = 'false';
+                } else {
+                    textEl.textContent = `#${tokenId}`;
+                    textEl.dataset.showingToken = 'true';
+                }
+            });
+        });
+        
+        document.getElementById('downloadBtn').addEventListener('click', async () => {
+            if (!activeConversationId) {
+                alert('다운로드할 악보가 없습니다.');
+                return;
+            }
+            
+            const conv = conversations.find(c => c.id === activeConversationId);
+            if (!conv) return;
+            
+            // 임시 컨테이너 생성
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'fixed';
+            tempContainer.style.left = '-10000px';
+            tempContainer.style.top = '0';
+            tempContainer.style.background = '#fff';
+            
+            // 영수증 프린터 폭 (80mm = 약 300px)
+            const receiptWidth = 400; // 200에서 400으로 증가
+            tempContainer.style.width = `${receiptWidth}px`;
+            
+            document.body.appendChild(tempContainer);
+            
+            const words = conv.words;
+            
+            // 사용자 메시지 추가 (라이프라인 위)
+            const userSection = document.createElement('div');
+            userSection.style.width = `${receiptWidth}px`;
+            userSection.style.padding = '30px 20px 20px 20px';
+            userSection.style.fontFamily = 'OnulSamhwa Gothic, sans-serif';
+            userSection.style.fontSize = '14px';
+            userSection.style.lineHeight = '1.6';
+            userSection.style.color = '#000';
+            userSection.style.wordBreak = 'keep-all';
+            userSection.style.textAlign = 'right';
+            userSection.innerHTML = `<div style="display: inline-block; max-width: 80%; text-align: left; padding: 10px 15px; border: 1px solid #000; border-radius: 20px; background: #fff;">${conv.userMessage}</div>`;
+            tempContainer.appendChild(userSection);
+            
+            // 단어를 그룹으로 나누기 (원래 로직과 동일)
+            let groups = [];
+            if (words.length <= 5) {
+                groups = [words];
+            } else if (words.length <= 10) {
+                const half = Math.ceil(words.length / 2);
+                groups = [words.slice(0, half), words.slice(half)];
+            } else {
+                for (let i = 0; i < words.length; i += 5) {
+                    groups.push(words.slice(i, i + 5));
+                }
+            }
+            
+            // 각 그룹(원)을 세로로 배치
+            groups.forEach((group, groupIndex) => {
+                const wrapperHeight = 440; // 220에서 440으로 증가
+                const radius = 120; // 60에서 120으로 증가
+                const centerX = receiptWidth / 2;
+                const centerY = wrapperHeight / 2;
+                
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                wrapper.style.width = `${receiptWidth}px`;
+                wrapper.style.height = `${wrapperHeight}px`;
+                wrapper.style.marginBottom = '30px'; // 15에서 30으로 증가
+                
+                // SVG로 원 그리기
+                const svgNS = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(svgNS, 'svg');
+                svg.setAttribute('width', receiptWidth);
+                svg.setAttribute('height', wrapperHeight);
+                svg.style.position = 'absolute';
+                svg.style.left = '0';
+                svg.style.top = '0';
+                
+                // 원 그리기
+                const circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', centerX);
+                circle.setAttribute('cy', centerY);
+                circle.setAttribute('r', radius);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', '#000');
+                circle.setAttribute('stroke-width', '1');
+                circle.setAttribute('opacity', '1');
+                svg.appendChild(circle);
+                
+                wrapper.appendChild(svg);
+                
+                // 단어 배치
+                group.forEach((word, index) => {
+                    const element = createWordElement(word);
+                    
+                    // 텍스트와 벡터 숨기기
+                    const wordText = element.querySelector('.word-text');
+                    const vectorDisplay = element.querySelector('.vector-display');
+                    if (wordText) wordText.style.display = 'none';
+                    if (vectorDisplay) vectorDisplay.style.display = 'none';
+                    
+                    const angle = (index / group.length) * Math.PI * 2 - Math.PI / 2;
+                    const radiusVariation = (Math.random() - 0.5) * 20;
+                    const wordRadius = radius + radiusVariation;
+                    const xPos = centerX + Math.cos(angle) * wordRadius;
+                    const yPos = centerY + Math.sin(angle) * wordRadius;
+                    
+                    element.style.position = 'absolute';
+                    element.style.left = `${xPos}px`;
+                    element.style.top = `${yPos}px`;
+                    // 화면 원 크기 대비 다운로드 원 크기 비율 적용
+                    element.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                    element.style.border = 'none';
+                    
+                    // 이미지들의 테두리 두껍게 만들기
+                    const images = element.querySelectorAll('img');
+                    images.forEach(img => {
+                        const src = img.src;
+                        const transform = img.style.transform || '';
+                        
+                        // transform에서 scale 값 추출
+                        const scaleMatch = transform.match(/scale\(([\d.]+)\)/);
+                        const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+                        
+                        // 다운로드용 -2/-3 파일로 교체
+                        if (src.includes('/1.png')) {
+                            img.src = src.replace('/1.png', '/1-2.png');
+                        } else if (src.includes('/4.png')) {
+                            img.src = src.replace('/4.png', '/4-2.png');
+                        } else if (src.includes('/7.png')) {
+                            img.src = src.replace('/7.png', '/7-2.png');
+                        } else if (src.includes('/8-1.png')) {
+                            // 8: 큰 거(3.3) → 8-2, 작은 거(1.5) → 8-3
+                            if (scaleValue > 2) {
+                                img.src = src.replace('/8-1.png', '/8-2.png');
+                            } else {
+                                img.src = src.replace('/8-1.png', '/8-3.png');
+                            }
+                        } else if (src.includes('/9.png')) {
+                            img.src = src.replace('/9.png', '/9-2.png');
+                        } else if (src.includes('/0-1.png')) {
+                            // 0: 큰 거(1.8) → 0-2, 작은 거(0.5) → 0-3
+                            if (scaleValue > 1) {
+                                img.src = src.replace('/0-1.png', '/0-2.png');
+                            } else {
+                                img.src = src.replace('/0-1.png', '/0-3.png');
+                            }
+                        }
+                        
+                        img.style.filter = 'contrast(1.3) brightness(0.95)';
+                        img.style.imageRendering = 'crisp-edges';
+                    });
+                    
+                    wrapper.appendChild(element);
+                });
+                
+                tempContainer.appendChild(wrapper);
+            });
+            
+            // AI 응답 추가 (라이프라인 아래)
+            const aiSection = document.createElement('div');
+            aiSection.style.width = `${receiptWidth}px`;
+            aiSection.style.padding = '20px 20px 30px 20px';
+            aiSection.style.fontFamily = 'OnulSamhwa Gothic, sans-serif';
+            aiSection.style.fontSize = '14px';
+            aiSection.style.lineHeight = '1.6';
+            aiSection.style.color = '#000';
+            aiSection.style.wordBreak = 'keep-all';
+            aiSection.style.textAlign = 'left';
+            aiSection.innerHTML = `<div style="display: inline-block; max-width: 80%; padding: 10px 15px; border: 1px solid #000; border-radius: 20px; background: #fff;">${conv.aiResponse}</div>`;
+            tempContainer.appendChild(aiSection);
+            
+            // 아래 여백 확보용 미세한 선 (거의 안보임)
+            const bottomSpacer = document.createElement('div');
+            bottomSpacer.style.width = `${receiptWidth}px`;
+            bottomSpacer.style.height = '60px'; // 여백 높이
+            bottomSpacer.style.borderBottom = '0.5px solid rgba(0,0,0,0.05)'; // 거의 안보이는 선
+            tempContainer.appendChild(bottomSpacer);
+            
+            // html2canvas로 캡처
+            try {
+                const canvas = await html2canvas(tempContainer, {
+                    backgroundColor: '#ffffff',
+                    scale: 6,
+                    logging: false,
+                    width: receiptWidth,
+                    windowWidth: receiptWidth,
+                    useCORS: true,
+                    allowTaint: false
+                });
+                
+                // 다운로드
+                const link = document.createElement('a');
+                link.download = `score_${activeConversationId}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                // 정리
+                document.body.removeChild(tempContainer);
+            } catch (error) {
+                console.error('다운로드 에러:', error);
+                document.body.removeChild(tempContainer);
+                alert('다운로드에 실패했습니다.');
+            }
+        });
+        
+        // PRINT 버튼 - DOWNLOAD와 동일한 이미지를 프린트
+        document.getElementById('printBtn').addEventListener('click', async () => {
+            if (!activeConversationId) {
+                alert('인쇄할 악보가 없습니다.');
+                return;
+            }
+            
+            const conv = conversations.find(c => c.id === activeConversationId);
+            if (!conv) return;
+            
+            // 임시 컨테이너 생성 (DOWNLOAD와 동일)
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'fixed';
+            tempContainer.style.left = '-10000px';
+            tempContainer.style.top = '0';
+            tempContainer.style.background = '#fff';
+            
+            const receiptWidth = 400;
+            tempContainer.style.width = `${receiptWidth}px`;
+            
+            document.body.appendChild(tempContainer);
+            
+            const words = conv.words;
+            
+            // 사용자 메시지 추가
+            const userSection = document.createElement('div');
+            userSection.style.width = `${receiptWidth}px`;
+            userSection.style.padding = '30px 20px 20px 20px';
+            userSection.style.fontFamily = 'OnulSamhwa Gothic, sans-serif';
+            userSection.style.fontSize = '14px';
+            userSection.style.lineHeight = '1.6';
+            userSection.style.color = '#000';
+            userSection.style.wordBreak = 'keep-all';
+            userSection.style.textAlign = 'right';
+            userSection.innerHTML = `<div style="display: inline-block; max-width: 80%; text-align: left; padding: 10px 15px; border: 1px solid #000; border-radius: 20px; background: #fff;">${conv.userMessage}</div>`;
+            tempContainer.appendChild(userSection);
+            
+            // 단어를 그룹으로 나누기
+            let groups = [];
+            if (words.length <= 5) {
+                groups = [words];
+            } else if (words.length <= 10) {
+                const half = Math.ceil(words.length / 2);
+                groups = [words.slice(0, half), words.slice(half)];
+            } else {
+                for (let i = 0; i < words.length; i += 5) {
+                    groups.push(words.slice(i, i + 5));
+                }
+            }
+            
+            // 각 그룹(원)을 세로로 배치
+            groups.forEach((group, groupIndex) => {
+                const wrapperHeight = 440;
+                const radius = 120;
+                const centerX = receiptWidth / 2;
+                const centerY = wrapperHeight / 2;
+                
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                wrapper.style.width = `${receiptWidth}px`;
+                wrapper.style.height = `${wrapperHeight}px`;
+                wrapper.style.marginBottom = '30px';
+                
+                const svgNS = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(svgNS, 'svg');
+                svg.setAttribute('width', receiptWidth);
+                svg.setAttribute('height', wrapperHeight);
+                svg.style.position = 'absolute';
+                svg.style.left = '0';
+                svg.style.top = '0';
+                
+                const circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', centerX);
+                circle.setAttribute('cy', centerY);
+                circle.setAttribute('r', radius);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', '#000');
+                circle.setAttribute('stroke-width', '1');
+                circle.setAttribute('opacity', '1');
+                svg.appendChild(circle);
+                
+                wrapper.appendChild(svg);
+                
+                group.forEach((word, index) => {
+                    const element = createWordElement(word);
+                    
+                    const wordText = element.querySelector('.word-text');
+                    const vectorDisplay = element.querySelector('.vector-display');
+                    if (wordText) wordText.style.display = 'none';
+                    if (vectorDisplay) vectorDisplay.style.display = 'none';
+                    
+                    const angle = (index / group.length) * Math.PI * 2 - Math.PI / 2;
+                    const radiusVariation = (Math.random() - 0.5) * 20;
+                    const wordRadius = radius + radiusVariation;
+                    const xPos = centerX + Math.cos(angle) * wordRadius;
+                    const yPos = centerY + Math.sin(angle) * wordRadius;
+                    
+                    element.style.position = 'absolute';
+                    element.style.left = `${xPos}px`;
+                    element.style.top = `${yPos}px`;
+                    element.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                    element.style.border = 'none';
+                    
+                    const images = element.querySelectorAll('img');
+                    images.forEach(img => {
+                        const src = img.src;
+                        const transform = img.style.transform || '';
+                        const scaleMatch = transform.match(/scale\(([\d.]+)\)/);
+                        const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+                        
+                        if (src.includes('/1.png')) {
+                            img.src = src.replace('/1.png', '/1-2.png');
+                        } else if (src.includes('/4.png')) {
+                            img.src = src.replace('/4.png', '/4-2.png');
+                        } else if (src.includes('/7.png')) {
+                            img.src = src.replace('/7.png', '/7-2.png');
+                        } else if (src.includes('/8-1.png')) {
+                            if (scaleValue > 2) {
+                                img.src = src.replace('/8-1.png', '/8-2.png');
+                            } else {
+                                img.src = src.replace('/8-1.png', '/8-3.png');
+                            }
+                        } else if (src.includes('/9.png')) {
+                            img.src = src.replace('/9.png', '/9-2.png');
+                        } else if (src.includes('/0-1.png')) {
+                            if (scaleValue > 1) {
+                                img.src = src.replace('/0-1.png', '/0-2.png');
+                            } else {
+                                img.src = src.replace('/0-1.png', '/0-3.png');
+                            }
+                        }
+                        
+                        img.style.filter = 'contrast(1.3) brightness(0.95)';
+                        img.style.imageRendering = 'crisp-edges';
+                    });
+                    
+                    wrapper.appendChild(element);
+                });
+                
+                tempContainer.appendChild(wrapper);
+            });
+            
+            // AI 응답 추가
+            const aiSection = document.createElement('div');
+            aiSection.style.width = `${receiptWidth}px`;
+            aiSection.style.padding = '20px 20px 30px 20px';
+            aiSection.style.fontFamily = 'OnulSamhwa Gothic, sans-serif';
+            aiSection.style.fontSize = '14px';
+            aiSection.style.lineHeight = '1.6';
+            aiSection.style.color = '#000';
+            aiSection.style.wordBreak = 'keep-all';
+            aiSection.style.textAlign = 'left';
+            aiSection.innerHTML = `<div style="display: inline-block; max-width: 80%; padding: 10px 15px; border: 1px solid #000; border-radius: 20px; background: #fff;">${conv.aiResponse}</div>`;
+            tempContainer.appendChild(aiSection);
+            
+            // 아래 여백
+            const bottomSpacer = document.createElement('div');
+            bottomSpacer.style.width = `${receiptWidth}px`;
+            bottomSpacer.style.height = '60px';
+            bottomSpacer.style.borderBottom = '0.5px solid rgba(0,0,0,0.05)';
+            tempContainer.appendChild(bottomSpacer);
+            
+            // html2canvas로 캡처 (DOWNLOAD와 동일)
+            try {
+                const canvas = await html2canvas(tempContainer, {
+                    backgroundColor: '#ffffff',
+                    scale: 6,
+                    logging: false,
+                    width: receiptWidth,
+                    windowWidth: receiptWidth,
+                    useCORS: true,
+                    allowTaint: false
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                
+                // 정리
+                document.body.removeChild(tempContainer);
+                
+                // 새 창 열어서 프린트
+                const printWindow = window.open('', '_blank');
+                if (!printWindow) {
+                    alert('팝업이 차단되었습니다. 팝업을 허용해주세요.');
+                    return;
+                }
+                
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Print Score</title>
+                        <style>
+                            * { margin: 0; padding: 0; }
+                            body { margin: 0; padding: 0; }
+                            img { width: 100%; max-width: 400px; display: block; margin: 0 auto; }
+                            @media print {
+                                body { margin: 0; }
+                                img { width: 100%; max-width: 100%; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <img src="${imgData}" onload="window.print();" />
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                
+            } catch (error) {
+                console.error('프린트 에러:', error);
+                if (tempContainer.parentNode) {
+                    document.body.removeChild(tempContainer);
+                }
+                alert('프린트에 실패했습니다.');
+            }
+        });
+        
+        document.getElementById('tempoSlider').addEventListener('input', function(e) {
+            tempoBPM = parseInt(e.target.value);
+            document.getElementById('tempoValue').textContent = tempoBPM + ' BPM';
+        });
+        
+        document.getElementById('promptInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateScore();
+            }
+        });
+        
+        document.getElementById('generateBtn').addEventListener('click', function() {
+            generateScore();
+        });
+
+        window.addEventListener('load', () => {
+            if (typeof nlp === 'undefined') {
+                console.log('compromise.js 로드 안됨, 기본값 사용');
+            } else {
+                console.log('compromise.js 로드 완료');
+            }
+            showEmptyCircle();
+        });
+        
+        function showEmptyCircle() {
+            const scoreContainer = document.getElementById('scoreContainer');
+            const lifeline = scoreContainer.querySelector('.lifeline');
+            
+            const containerWidth = scoreContainer.offsetWidth;
+            const containerHeight = scoreContainer.offsetHeight;
+            const centerX = containerWidth / 2;
+            const centerY = containerHeight * 0.49;
+            const radius = Math.min(containerWidth, containerHeight) * 0.35;
+            
+            lifeline.innerHTML = '';
+            
+            const svgNS = 'http://www.w3.org/2000/svg';
+            const svg = document.createElementNS(svgNS, 'svg');
+            svg.style.position = 'absolute';
+            svg.style.left = '0';
+            svg.style.top = '0';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.pointerEvents = 'none';
+            
+            const circle = document.createElementNS(svgNS, 'circle');
+            circle.setAttribute('cx', centerX);
+            circle.setAttribute('cy', centerY);
+            circle.setAttribute('r', radius);
+            circle.setAttribute('fill', 'none');
+            circle.setAttribute('stroke', '#000');
+            circle.setAttribute('stroke-width', '1');
+            circle.setAttribute('opacity', '0.3');
+            
+            svg.appendChild(circle);
+            lifeline.appendChild(svg);
+        }
+        
+        document.body.addEventListener('click', function initOnFirstClick() {
+            initAudio();
+            console.log('첫 클릭으로 오디오 초기화됨');
+            document.body.removeEventListener('click', initOnFirstClick);
+        }, { once: true });
+        
+        document.body.addEventListener('touchstart', function initOnFirstTouch() {
+            initAudio();
+            console.log('첫 터치로 오디오 초기화됨');
+            document.body.removeEventListener('touchstart', initOnFirstTouch);
+        }, { once: true, passive: true });
+
+        // 드래그 기능 제거됨
+    </script>
+</body>
+</html>
