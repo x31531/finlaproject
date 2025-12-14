@@ -306,6 +306,10 @@
             margin-top: 5px;
             font-family: 'OnulSamhwa Gothic', sans-serif;
             font-weight: bold;
+            position: relative;
+            z-index: 100;
+            -webkit-text-stroke: 3px #fff;
+            paint-order: stroke fill;
         }
 
         .input-section {
@@ -324,7 +328,7 @@
 
         #promptInput {
             width: 40%;
-            padding: 0 15px;
+            padding: 11px 15px 13px 15px;
             height: 40px;
             font-family: 'OnulSamhwa Gothic', sans-serif;
             font-size: 12px;
@@ -333,8 +337,7 @@
             background: #fff;
             outline: none;
             text-align: left;
-            line-height: 40px;
-            padding-bottom: 2px;
+            line-height: 1.4;
         }
 
         #promptInput:focus {
@@ -432,6 +435,125 @@
             color: #000;
             text-decoration: underline;
         }
+        
+        .info-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .info-modal-content {
+            background: #fff;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            position: relative;
+            border-radius: 0;
+            overflow: hidden;
+        }
+        
+        .info-modal-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .info-modal-title {
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        
+        .info-close-btn {
+            background: none;
+            border: none;
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .info-close-btn:hover {
+            opacity: 0.5;
+        }
+        
+        .info-slides-container {
+            position: relative;
+            width: 100%;
+            height: calc(90vh - 120px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .info-slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 40px 20px 40px;
+        }
+        
+        .info-slide.active {
+            display: flex;
+        }
+        
+        .info-slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .info-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 30px;
+            border-top: 1px solid #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+        }
+        
+        .info-nav-btn {
+            background: none;
+            border: none;
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            transition: opacity 0.2s;
+            min-width: 60px;
+        }
+        
+        .info-nav-btn:hover:not(:disabled) {
+            opacity: 0.5;
+        }
+        
+        .info-nav-btn:disabled {
+            opacity: 0.2;
+            cursor: default;
+        }
+        
+        .info-counter {
+            font-family: 'OnulSamhwa Gothic', sans-serif;
+            font-size: 12px;
+            color: #666;
+        }
 
     </style>
 </head>
@@ -439,11 +561,11 @@
     <div class="container">
         <div class="header">
             <div style="display: flex; gap: 15px;">
+                <button class="control-btn" id="infoBtn">INFO</button>
                 <button class="control-btn" id="playBtn">PLAY</button>
                 <button class="control-btn" id="stopBtn" disabled>STOP</button>
                 <button class="control-btn" id="resetBtn">RESET</button>
-                <button class="control-btn" id="tokenBtn">TOKEN ID</button>
-                <button class="control-btn" id="downloadBtn">DOWNLOAD</button>
+                <button class="control-btn" id="tokenBtn">NUMBER CODE</button>
                 <button class="control-btn" id="printBtn">PRINT</button>
             </div>
             <div class="controls">
@@ -463,6 +585,55 @@
         <div class="input-section">
             <input type="text" id="promptInput" placeholder="오늘은 어떤 연주를 들려드릴까요?" value="">
             <button id="generateBtn">↑</button>
+        </div>
+    </div>
+    
+    <div class="info-modal" id="infoModal">
+        <div class="info-modal-content">
+            <div class="info-modal-header">
+                <div class="info-modal-title">AI Plays Your Words</div>
+                <button class="info-close-btn" id="infoCloseBtn">CLOSE</button>
+            </div>
+            <div class="info-slides-container">
+                <div class="info-slide active">
+                    <img src="설명창-01.png" alt="설명 1">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-02.png" alt="설명 2">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-03.png" alt="설명 3">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-04.png" alt="설명 4">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-05.png" alt="설명 5">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-06.png" alt="설명 6">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-07.png" alt="설명 7">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-08.png" alt="설명 8">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-09.png" alt="설명 9">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-10.png" alt="설명 10">
+                </div>
+                <div class="info-slide">
+                    <img src="설명창-11.png" alt="설명 11">
+                </div>
+            </div>
+            <div class="info-nav">
+                <button class="info-nav-btn" id="infoPrevBtn">← PREV</button>
+                <span class="info-counter"><span id="currentSlide">1</span> / 11</span>
+                <button class="info-nav-btn" id="infoNextBtn">NEXT →</button>
+            </div>
         </div>
     </div>
 
@@ -1175,10 +1346,10 @@
             }
             element.appendChild(tokenContainer);
             
-            const vectorElement = document.createElement('div');
-            vectorElement.className = 'vector-display';
-            vectorElement.textContent = formatVector(embedding);
-            element.appendChild(vectorElement);
+            // const vectorElement = document.createElement('div');
+            // vectorElement.className = 'vector-display';
+            // vectorElement.textContent = formatVector(embedding);
+            // element.appendChild(vectorElement);
             
             const textElement = document.createElement('div');
             textElement.className = 'word-text';
@@ -1238,205 +1409,6 @@
             });
         });
         
-        document.getElementById('downloadBtn').addEventListener('click', async () => {
-            if (!activeConversationId) {
-                alert('다운로드할 악보가 없습니다.');
-                return;
-            }
-            
-            const conv = conversations.find(c => c.id === activeConversationId);
-            if (!conv) return;
-            
-            // 임시 컨테이너 생성
-            const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'fixed';
-            tempContainer.style.left = '-10000px';
-            tempContainer.style.top = '0';
-            tempContainer.style.background = '#fff';
-            
-            // 영수증 프린터 폭 (80mm = 약 300px)
-            const receiptWidth = 400; // 200에서 400으로 증가
-            tempContainer.style.width = `${receiptWidth}px`;
-            
-            document.body.appendChild(tempContainer);
-            
-            const words = conv.words;
-            
-            // 사용자 메시지 추가 (라이프라인 위)
-            const userSection = document.createElement('div');
-            userSection.style.width = `${receiptWidth}px`;
-            userSection.style.padding = '30px 20px 20px 20px';
-            userSection.style.fontFamily = 'OnulSamhwa Gothic, sans-serif';
-            userSection.style.fontSize = '14px';
-            userSection.style.lineHeight = '1.6';
-            userSection.style.color = '#000';
-            userSection.style.wordBreak = 'keep-all';
-            userSection.style.textAlign = 'right';
-            userSection.innerHTML = `<div style="display: inline-block; max-width: 80%; text-align: left; padding: 10px 15px; border: 1px solid #000; border-radius: 20px; background: #fff;">${conv.userMessage}</div>`;
-            tempContainer.appendChild(userSection);
-            
-            // 단어를 그룹으로 나누기 (원래 로직과 동일)
-            let groups = [];
-            if (words.length <= 5) {
-                groups = [words];
-            } else if (words.length <= 10) {
-                const half = Math.ceil(words.length / 2);
-                groups = [words.slice(0, half), words.slice(half)];
-            } else {
-                for (let i = 0; i < words.length; i += 5) {
-                    groups.push(words.slice(i, i + 5));
-                }
-            }
-            
-            // 각 그룹(원)을 세로로 배치
-            groups.forEach((group, groupIndex) => {
-                const wrapperHeight = 440; // 220에서 440으로 증가
-                const radius = 120; // 60에서 120으로 증가
-                const centerX = receiptWidth / 2;
-                const centerY = wrapperHeight / 2;
-                
-                const wrapper = document.createElement('div');
-                wrapper.style.position = 'relative';
-                wrapper.style.width = `${receiptWidth}px`;
-                wrapper.style.height = `${wrapperHeight}px`;
-                wrapper.style.marginBottom = '30px'; // 15에서 30으로 증가
-                
-                // SVG로 원 그리기
-                const svgNS = 'http://www.w3.org/2000/svg';
-                const svg = document.createElementNS(svgNS, 'svg');
-                svg.setAttribute('width', receiptWidth);
-                svg.setAttribute('height', wrapperHeight);
-                svg.style.position = 'absolute';
-                svg.style.left = '0';
-                svg.style.top = '0';
-                
-                // 원 그리기
-                const circle = document.createElementNS(svgNS, 'circle');
-                circle.setAttribute('cx', centerX);
-                circle.setAttribute('cy', centerY);
-                circle.setAttribute('r', radius);
-                circle.setAttribute('fill', 'none');
-                circle.setAttribute('stroke', '#000');
-                circle.setAttribute('stroke-width', '1');
-                circle.setAttribute('opacity', '1');
-                svg.appendChild(circle);
-                
-                wrapper.appendChild(svg);
-                
-                // 단어 배치
-                group.forEach((word, index) => {
-                    const element = createWordElement(word);
-                    
-                    // 텍스트와 벡터 숨기기
-                    const wordText = element.querySelector('.word-text');
-                    const vectorDisplay = element.querySelector('.vector-display');
-                    if (wordText) wordText.style.display = 'none';
-                    if (vectorDisplay) vectorDisplay.style.display = 'none';
-                    
-                    const angle = (index / group.length) * Math.PI * 2 - Math.PI / 2;
-                    const radiusVariation = (Math.random() - 0.5) * 20;
-                    const wordRadius = radius + radiusVariation;
-                    const xPos = centerX + Math.cos(angle) * wordRadius;
-                    const yPos = centerY + Math.sin(angle) * wordRadius;
-                    
-                    element.style.position = 'absolute';
-                    element.style.left = `${xPos}px`;
-                    element.style.top = `${yPos}px`;
-                    // 화면 원 크기 대비 다운로드 원 크기 비율 적용
-                    element.style.transform = 'translate(-50%, -50%) scale(0.5)';
-                    element.style.border = 'none';
-                    
-                    // 이미지들의 테두리 두껍게 만들기
-                    const images = element.querySelectorAll('img');
-                    images.forEach(img => {
-                        const src = img.src;
-                        const transform = img.style.transform || '';
-                        
-                        // transform에서 scale 값 추출
-                        const scaleMatch = transform.match(/scale\(([\d.]+)\)/);
-                        const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
-                        
-                        // 다운로드용 -2/-3 파일로 교체
-                        if (src.includes('/1.png')) {
-                            img.src = src.replace('/1.png', '/1-2.png');
-                        } else if (src.includes('/4.png')) {
-                            img.src = src.replace('/4.png', '/4-2.png');
-                        } else if (src.includes('/7.png')) {
-                            img.src = src.replace('/7.png', '/7-2.png');
-                        } else if (src.includes('/8-1.png')) {
-                            // 8: 큰 거(3.3) → 8-2, 작은 거(1.5) → 8-3
-                            if (scaleValue > 2) {
-                                img.src = src.replace('/8-1.png', '/8-2.png');
-                            } else {
-                                img.src = src.replace('/8-1.png', '/8-3.png');
-                            }
-                        } else if (src.includes('/9.png')) {
-                            img.src = src.replace('/9.png', '/9-2.png');
-                        } else if (src.includes('/0-1.png')) {
-                            // 0: 큰 거(1.8) → 0-2, 작은 거(0.5) → 0-3
-                            if (scaleValue > 1) {
-                                img.src = src.replace('/0-1.png', '/0-2.png');
-                            } else {
-                                img.src = src.replace('/0-1.png', '/0-3.png');
-                            }
-                        }
-                        
-                        img.style.filter = 'contrast(1.3) brightness(0.95)';
-                        img.style.imageRendering = 'crisp-edges';
-                    });
-                    
-                    wrapper.appendChild(element);
-                });
-                
-                tempContainer.appendChild(wrapper);
-            });
-            
-            // AI 응답 추가 (라이프라인 아래)
-            const aiSection = document.createElement('div');
-            aiSection.style.width = `${receiptWidth}px`;
-            aiSection.style.padding = '20px 20px 30px 20px';
-            aiSection.style.fontFamily = 'OnulSamhwa Gothic, sans-serif';
-            aiSection.style.fontSize = '14px';
-            aiSection.style.lineHeight = '1.6';
-            aiSection.style.color = '#000';
-            aiSection.style.wordBreak = 'keep-all';
-            aiSection.style.textAlign = 'left';
-            aiSection.innerHTML = `<div style="display: inline-block; max-width: 80%; padding: 10px 15px; border: 1px solid #000; border-radius: 20px; background: #fff;">${conv.aiResponse}</div>`;
-            tempContainer.appendChild(aiSection);
-            
-            // 아래 여백 확보용 미세한 선 (거의 안보임)
-            const bottomSpacer = document.createElement('div');
-            bottomSpacer.style.width = `${receiptWidth}px`;
-            bottomSpacer.style.height = '60px'; // 여백 높이
-            bottomSpacer.style.borderBottom = '0.5px solid rgba(0,0,0,0.05)'; // 거의 안보이는 선
-            tempContainer.appendChild(bottomSpacer);
-            
-            // html2canvas로 캡처
-            try {
-                const canvas = await html2canvas(tempContainer, {
-                    backgroundColor: '#ffffff',
-                    scale: 6,
-                    logging: false,
-                    width: receiptWidth,
-                    windowWidth: receiptWidth,
-                    useCORS: true,
-                    allowTaint: false
-                });
-                
-                // 다운로드
-                const link = document.createElement('a');
-                link.download = `score_${activeConversationId}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                
-                // 정리
-                document.body.removeChild(tempContainer);
-            } catch (error) {
-                console.error('다운로드 에러:', error);
-                document.body.removeChild(tempContainer);
-                alert('다운로드에 실패했습니다.');
-            }
-        });
         
         // PRINT 버튼 - DOWNLOAD와 동일한 이미지를 프린트
         document.getElementById('printBtn').addEventListener('click', async () => {
@@ -1726,6 +1698,65 @@
         }, { once: true, passive: true });
 
         // 드래그 기능 제거됨
+        
+        // 설명창 기능
+        let currentInfoSlide = 0;
+        const totalInfoSlides = 11;
+        
+        function showInfoSlide(index) {
+            const slides = document.querySelectorAll('.info-slide');
+            slides.forEach((slide, i) => {
+                slide.classList.toggle('active', i === index);
+            });
+            
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.getElementById('infoPrevBtn').disabled = index === 0;
+            document.getElementById('infoNextBtn').disabled = index === totalInfoSlides - 1;
+            
+            currentInfoSlide = index;
+        }
+        
+        document.getElementById('infoBtn').addEventListener('click', () => {
+            document.getElementById('infoModal').style.display = 'flex';
+            showInfoSlide(0);
+        });
+        
+        document.getElementById('infoCloseBtn').addEventListener('click', () => {
+            document.getElementById('infoModal').style.display = 'none';
+        });
+        
+        document.getElementById('infoPrevBtn').addEventListener('click', () => {
+            if (currentInfoSlide > 0) {
+                showInfoSlide(currentInfoSlide - 1);
+            }
+        });
+        
+        document.getElementById('infoNextBtn').addEventListener('click', () => {
+            if (currentInfoSlide < totalInfoSlides - 1) {
+                showInfoSlide(currentInfoSlide + 1);
+            }
+        });
+        
+        // 모달 배경 클릭시 닫기
+        document.getElementById('infoModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('infoModal')) {
+                document.getElementById('infoModal').style.display = 'none';
+            }
+        });
+        
+        // 키보드 화살표로 슬라이드 이동
+        document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('infoModal');
+            if (modal.style.display === 'flex') {
+                if (e.key === 'ArrowLeft' && currentInfoSlide > 0) {
+                    showInfoSlide(currentInfoSlide - 1);
+                } else if (e.key === 'ArrowRight' && currentInfoSlide < totalInfoSlides - 1) {
+                    showInfoSlide(currentInfoSlide + 1);
+                } else if (e.key === 'Escape') {
+                    modal.style.display = 'none';
+                }
+            }
+        });
     </script>
 </body>
 </html>
